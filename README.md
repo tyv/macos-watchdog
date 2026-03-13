@@ -140,17 +140,16 @@ nohup node dist/cli.js start > /dev/null 2>&1 &
 ### Option B: macOS launchd (recommended — survives reboots)
 
 ```bash
-# Install the launch agent
-./install.sh
-
-# Load (start) the service
-launchctl load ~/Library/LaunchAgents/com.watchdog.monitor.plist
-
-# Unload (stop) the service
-launchctl unload ~/Library/LaunchAgents/com.watchdog.monitor.plist
+watchdog install      # checks for updates, writes plist, loads service
+watchdog uninstall    # stops service, removes plist (keeps logs)
 ```
 
-The installer auto-detects your `node` path and writes a personalised plist.
+The `install` command:
+1. Checks GitHub for the latest release
+2. If a newer version exists, prompts to download it
+3. Generates the launchd plist and loads the service
+
+To update in the future, just run `watchdog install` again — it handles everything.
 
 ## File locations
 
