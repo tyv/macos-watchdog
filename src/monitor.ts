@@ -1,8 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import type { Config } from "./config.js";
-import { takeSnapshot, type ProcessSnapshot } from "./sampler.js";
-import { writeLog, type LogEntry } from "./logger.js";
+import { takeSnapshot, type ProcessSnapshot, type MemoryPressure } from "./sampler.js";
+import { writeLog, type LogEntry, type LogLevel } from "./logger.js";
 
 function ensureDir(dir: string) {
   if (!fs.existsSync(dir)) {
@@ -19,8 +19,27 @@ function formatProcs(procs: ProcessSnapshot[], metric: "cpu" | "mem"): string {
     .join("\n");
 }
 
+const PRESSURE_RANK: Record<MemoryPressure, number> = {
+  normal: 0,
+  warn: 1,
+  critical: 2,
+};
+
+const PRESSURE_LOG_LEVEL: Record<MemoryPressure, LogLevel> = {
+  normal: "info",
+  warn: "warn",
+  critical: "alert",
+};
+
+const PRESSURE_LABEL: Record<MemoryPressure, string> = {
+  normal: "GREEN",
+  warn: "YELLOW",
+  critical: "RED",
+};
+
 async function tick(config: Config): Promise<void> {
   const snapshot = await takeSnapshot(config.topN);
+  const mem = snapshot.memory;
 
   const heavyCpuProcs = snapshot.topCpu.filter(
     (p) => p.cpu >= config.cpuThreshold,
@@ -41,34 +60,38 @@ async function tick(config: Config): Promise<void> {
     console.log(`[${snapshot.timestamp}] CPU ALERT — ${heavyCpuProcs.length} process(es) above ${config.cpuThreshold}%`);
   }
 
-  if (snapshot.usedMemPct >= config.memThreshold) {
+  const thresholdRank = PRESSURE_RANK[config.memPressureAlert];
+  const currentRank = PRESSURE_RANK[mem.pressure];
+
+  if (currentRank >= thresholdRank && mem.pressure !== "normal") {
+    const label = PRESSURE_LABEL[mem.pressure];
     const entry: LogEntry = {
       timestamp: snapshot.timestamp,
-      level: "alert",
+      level: PRESSURE_LOG_LEVEL[mem.pressure],
       type: "mem",
-      message: `High system memory (${snapshot.usedMemPct}% used, ${snapshot.freeMemMB}MB free). Top consumers:\n${formatProcs(snapshot.topMem, "mem")}`,
+      message: `Memory pressure ${label} (level ${mem.pressureLevel}, swap ${mem.swapUsedMB}MB/${mem.swapTotalMB}MB). Top consumers:\n${formatProcs(snapshot.topMem, "mem")}`,
       data: {
-        usedMemPct: snapshot.usedMemPct,
-        freeMemMB: snapshot.freeMemMB,
-        totalMemMB: snapshot.totalMemMB,
+        pressure: mem.pressure,
+        pressureLevel: mem.pressureLevel,
+        swapUsedMB: mem.swapUsedMB,
+        swapTotalMB: mem.swapTotalMB,
+        freeMemMB: mem.freeMemMB,
+        totalMemMB: mem.totalMemMB,
         processes: snapshot.topMem,
       },
     };
     writeLog(config.logDir, entry);
-    console.log(`[${snapshot.timestamp}] MEM ALERT — system at ${snapshot.usedMemPct}% (${snapshot.freeMemMB}MB free)`);
+    console.log(`[${snapshot.timestamp}] MEM ${label} — pressure level ${mem.pressureLevel}, swap ${mem.swapUsedMB}MB used`);
   }
 
-  // Always write a periodic snapshot at info level for the report
   const snapshotEntry: LogEntry = {
     timestamp: snapshot.timestamp,
     level: "info",
     type: "snapshot",
-    message: `CPU ~${snapshot.totalCpu}% | Mem ~${snapshot.usedMemPct}% (${snapshot.freeMemMB}MB free)`,
+    message: `CPU ~${snapshot.totalCpu}% | Mem pressure: ${mem.pressure} (level ${mem.pressureLevel}) | Swap: ${mem.swapUsedMB}MB/${mem.swapTotalMB}MB`,
     data: {
       totalCpu: snapshot.totalCpu,
-      usedMemPct: snapshot.usedMemPct,
-      freeMemMB: snapshot.freeMemMB,
-      totalMemMB: snapshot.totalMemMB,
+      memory: mem,
       topCpu: snapshot.topCpu,
       topMem: snapshot.topMem,
     },
@@ -79,18 +102,16 @@ async function tick(config: Config): Promise<void> {
 export function startMonitor(config: Config): void {
   ensureDir(path.dirname(config.pidFile));
 
-  // Write PID file so we can stop the daemon later
   fs.writeFileSync(config.pidFile, String(process.pid), "utf-8");
 
   console.log(`Watchdog started (PID ${process.pid})`);
   console.log(`  Interval: ${config.intervalSec}s`);
   console.log(`  CPU threshold: ${config.cpuThreshold}%`);
-  console.log(`  Mem threshold: ${config.memThreshold}% (system-wide)`);
+  console.log(`  Mem pressure alert: ${config.memPressureAlert} (${config.memPressureAlert === "warn" ? "yellow + red" : "red only"})`);
   console.log(`  Logs: ${config.logDir}`);
   console.log(`  PID file: ${config.pidFile}`);
   console.log("");
 
-  // Run immediately, then repeat
   tick(config).catch(console.error);
   const timer = setInterval(() => {
     tick(config).catch(console.error);

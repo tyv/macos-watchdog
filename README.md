@@ -2,7 +2,7 @@
 
 A lightweight CLI tool that monitors CPU and memory usage on macOS, logs resource hogs, and generates readable reports.
 
-**Zero runtime dependencies** — uses only Node.js built-ins and the native `ps` command.
+**Zero runtime dependencies** — uses only Node.js built-ins and native macOS commands (`ps`, `sysctl`).
 
 ---
 
@@ -65,11 +65,12 @@ node dist/cli.js report --last 24h
 
 ## How it works
 
-1. Every **30 seconds** (configurable), the watchdog samples all running processes via `ps`.
-2. If any single process exceeds the **CPU threshold** (default 80%), or the **system-wide memory** exceeds the **memory threshold** (default 90%), an alert is written to a structured JSONL log file with the top offenders.
-3. A snapshot with system-wide stats and the top 5 processes (by CPU and memory) is always logged, even if nothing breaches the threshold.
-4. Logs are stored as one file per day: `~/.macos-watchdog/logs/watchdog-YYYY-MM-DD.jsonl`
-5. The `report` command reads these logs and produces a Markdown report with tables, rankings, and a timeline.
+1. Every **30 seconds** (configurable), the watchdog samples all running processes via `ps` and reads macOS memory pressure via `sysctl`.
+2. **CPU alerts**: if any single process exceeds the CPU threshold (default 80%), an alert is logged with the offending processes.
+3. **Memory alerts**: uses macOS **memory pressure** (the same metric behind Activity Monitor's green/yellow/red gauge) instead of raw RAM usage. macOS always uses ~100% of RAM for caching — that's normal. Alerts fire only when pressure is yellow (warn) or red (critical), meaning the system is actually struggling. The top memory consumers and swap usage are logged.
+4. A snapshot with system-wide stats (CPU, memory pressure, swap, top processes) is always logged, even when nothing triggers.
+5. Logs are stored as one file per day: `~/.macos-watchdog/logs/watchdog-YYYY-MM-DD.jsonl`
+6. The `report` command reads these logs and produces a Markdown report with tables, rankings, and a timeline.
 
 ## Commands
 
@@ -83,7 +84,7 @@ node dist/cli.js start [options]
 |--------|---------|-------------|
 | `--interval <sec>` | `30` | How often to sample (seconds) |
 | `--cpu-threshold <pct>` | `80` | Per-process CPU % to trigger an alert |
-| `--mem-threshold <pct>` | `90` | System-wide memory % to trigger an alert |
+| `--mem-pressure <level>` | `warn` | Memory pressure to alert on: `warn` (yellow+red) or `critical` (red only) |
 
 Press `Ctrl+C` to stop, or use the `stop` command from another terminal.
 
@@ -176,20 +177,30 @@ WATCHDOG_HOME=/tmp/my-watchdog node dist/cli.js start
 
 ## Overview
 
-| Metric           | Value  |
-|------------------|--------|
-| Total snapshots  | 4      |
-| CPU alerts       | 4      |
-| Memory alerts    | 0      |
-| Avg CPU load     | 115.5% |
-| Peak CPU load    | 165.1% |
+| Metric                           | Value  |
+|----------------------------------|--------|
+| Total snapshots                  | 120    |
+| CPU alerts                       | 4      |
+| Memory pressure warnings (yellow)| 12     |
+| Memory pressure critical (red)   | 0      |
+| Avg CPU load                     | 42.3%  |
+| Peak CPU load                    | 165.1% |
+| Lowest memory pressure level     | 18     |
+| Peak swap usage                  | 11750MB|
 
 ## Top CPU Offenders
 
-| Process          | Alerts | Avg CPU% | Peak CPU% |
-|------------------|--------|----------|-----------|
-| zoom.us          | 4      | 61.9%    | 72.7%     |
-| WindowServer     | 4      | 57.1%    | 87.3%     |
+| Process      | Alerts | Avg CPU% | Peak CPU% |
+|--------------|--------|----------|-----------|
+| zoom.us      | 4      | 61.9%    | 72.7%     |
+| WindowServer | 4      | 57.1%    | 87.3%     |
+
+## Top Memory Consumers (during pressure)
+
+| Process                 | Seen in alerts | Avg Mem% | Peak Mem% |
+|-------------------------|----------------|----------|-----------|
+| Cursor Helper (Renderer)| 12             | 4.2%     | 5.1%      |
+| idea                    | 10             | 2.4%     | 3.0%      |
 ```
 
 ## Project structure
@@ -198,7 +209,7 @@ WATCHDOG_HOME=/tmp/my-watchdog node dist/cli.js start
 src/
   cli.ts        CLI entry point — parses commands and options
   config.ts     Default thresholds, paths, and config resolution
-  sampler.ts    Reads process list via `ps`, computes system stats
+  sampler.ts    Reads process list via `ps`, memory pressure via `sysctl`
   logger.ts     Writes/reads JSONL log files (one per day)
   monitor.ts    Periodic sampling loop, threshold checking, alerting
   reporter.ts   Reads logs and generates Markdown reports

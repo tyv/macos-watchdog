@@ -21,7 +21,8 @@ function usage(): never {
   START OPTIONS
     --interval <sec>       Sampling interval (default: 30)
     --cpu-threshold <pct>  Per-process CPU alert threshold (default: 80)
-    --mem-threshold <pct>  System-wide memory % alert threshold (default: 90)
+    --mem-pressure <level> Memory pressure to alert on: warn or critical (default: warn)
+                           warn = yellow + red, critical = red only
 
   REPORT OPTIONS
     --from <YYYY-MM-DD>    Start date (default: today)
@@ -86,8 +87,13 @@ function cmdStart(args: Map<string, string>): void {
   if (args.has("--cpu-threshold")) {
     overrides.cpuThreshold = parseInt(args.get("--cpu-threshold")!, 10);
   }
-  if (args.has("--mem-threshold")) {
-    overrides.memThreshold = parseInt(args.get("--mem-threshold")!, 10);
+  if (args.has("--mem-pressure")) {
+    const val = args.get("--mem-pressure")!;
+    if (val !== "warn" && val !== "critical") {
+      console.error(`Invalid --mem-pressure value: "${val}". Use "warn" or "critical".`);
+      process.exit(1);
+    }
+    overrides.memPressureAlert = val;
   }
 
   const config = resolveConfig(overrides);

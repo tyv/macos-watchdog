@@ -1,0 +1,19 @@
+{
+  "mcpServers": {
+    "wix-mcp-gateway": {
+      "type": "http",
+      "url": "https://mcp-s.wewix.net/mcp"
+    },
+    "wix-mcp-remote": {
+      "type": "http",
+      "url": "https://mcp.wix.com/mcp"
+    },
+    "wix-design-system": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@wix/design-system-mcp"
+      ]
+    }
+  }
+}

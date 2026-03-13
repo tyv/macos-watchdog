@@ -1,13 +1,15 @@
 import path from "node:path";
 import os from "node:os";
 
+import type { MemoryPressure } from "./sampler.js";
+
 export interface Config {
   /** Sampling interval in seconds */
   intervalSec: number;
   /** CPU usage % threshold per-process to trigger a log entry */
   cpuThreshold: number;
-  /** System-wide memory usage % threshold to trigger a log entry */
-  memThreshold: number;
+  /** Minimum memory pressure level to trigger alerts */
+  memPressureAlert: MemoryPressure;
   /** Directory where JSONL log files are stored */
   logDir: string;
   /** Directory where generated reports are saved */
@@ -25,7 +27,7 @@ const BASE_DIR =
 export const DEFAULT_CONFIG: Config = {
   intervalSec: 30,
   cpuThreshold: 80,
-  memThreshold: 90,
+  memPressureAlert: "warn",
   logDir: path.join(BASE_DIR, "logs"),
   reportDir: path.join(BASE_DIR, "reports"),
   pidFile: path.join(BASE_DIR, "watchdog.pid"),
