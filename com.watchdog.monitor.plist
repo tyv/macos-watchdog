@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.watchdog.monitor</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <!-- UPDATE this path if your node binary is elsewhere -->
+        <string>/Users/yuriitkachenko/.local/share/fnm/node-versions/v20.19.2/installation/bin/node</string>
+        <string>/Users/yuriitkachenko/projects/macos-watchdog/dist/cli.js</string>
+        <string>start</string>
+    </array>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>KeepAlive</key>
+    <true/>
+
+    <key>StandardOutPath</key>
+    <string>/Users/yuriitkachenko/.macos-watchdog/launchd-stdout.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>/Users/yuriitkachenko/.macos-watchdog/launchd-stderr.log</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/usr/local/bin:/usr/bin:/bin</string>
+    </dict>
+</dict>
+</plist>
