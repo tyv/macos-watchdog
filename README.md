@@ -6,12 +6,42 @@ A lightweight CLI tool that monitors CPU and memory usage on macOS, logs resourc
 
 ---
 
+## Install (pre-built, no build step)
+
+Every push to `main` triggers a GitHub Actions build that publishes a ready-to-run release. Just download and go:
+
+```bash
+mkdir -p ~/.macos-watchdog-bin \
+  && curl -fsSL https://github.com/tyv/macos-watchdog/releases/latest/download/macos-watchdog.tar.gz \
+     | tar -xz -C ~/.macos-watchdog-bin
+```
+
+Then run it:
+
+```bash
+node ~/.macos-watchdog-bin/dist/cli.js start
+```
+
+Optionally alias it in your shell profile (`~/.zshrc`):
+
+```bash
+alias watchdog="node ~/.macos-watchdog-bin/dist/cli.js"
+```
+
+To update, just re-run the curl command above.
+
+## Build from source
+
+```bash
+git clone git@github.com:tyv/macos-watchdog.git
+cd macos-watchdog
+npm install
+npm run build
+```
+
 ## Quick start
 
 ```bash
-# Build
-tsc            # or: npm run build
-
 # Run the monitor (foreground)
 node dist/cli.js start
 
@@ -167,4 +197,4 @@ src/
 
 - macOS (uses `ps` with macOS-specific flags)
 - Node.js 18+
-- TypeScript 5+ (for building; already compiled JS in `dist/`)
+- TypeScript 5+ (only needed if building from source)

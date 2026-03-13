@@ -1,0 +1,58 @@
+name: Build & Release
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - run: npm install --registry https://registry.npmjs.org/
+
+      - run: npm run build
+
+      - name: Package release artifact
+        run: |
+          mkdir -p release/dist
+          cp -r dist/* release/dist/
+          cp package.json README.md install.sh com.watchdog.monitor.plist release/
+          chmod +x release/install.sh
+          tar -czf macos-watchdog.tar.gz -C release .
+
+      - name: Generate version tag
+        id: tag
+        run: |
+          VERSION="v$(node -e "console.log(require('./package.json').version)")"
+          SHA_SHORT=$(git rev-parse --short HEAD)
+          TAG="${VERSION}+${SHA_SHORT}"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.tag }}
+          name: ${{ steps.tag.outputs.tag }}
+          body: |
+            **Auto-built from `main` @ ${{ github.sha }}**
+
+            ### Install (no build required)
+            ```bash
+            curl -fsSL https://github.com/tyv/macos-watchdog/releases/latest/download/macos-watchdog.tar.gz | tar -xz -C ~/.macos-watchdog-bin
+            ```
+            Then run with:
+            ```bash
+            node ~/.macos-watchdog-bin/dist/cli.js start
+            ```
+          files: macos-watchdog.tar.gz
+          make_latest: true
