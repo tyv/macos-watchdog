@@ -28,7 +28,18 @@ Optionally alias it in your shell profile (`~/.zshrc`):
 alias watchdog="node ~/.macos-watchdog-bin/dist/cli.js"
 ```
 
-To update, just re-run the curl command above.
+### Updating
+
+To update to the latest version, stop the running daemon and re-run the same install command:
+
+```bash
+node ~/.macos-watchdog-bin/dist/cli.js stop
+mkdir -p ~/.macos-watchdog-bin \
+  && curl -fsSL https://github.com/tyv/macos-watchdog/releases/latest/download/macos-watchdog.tar.gz \
+     | tar -xz -C ~/.macos-watchdog-bin
+```
+
+Your logs and reports in `~/.macos-watchdog/` are kept — only the binary is replaced.
 
 ## Build from source
 
@@ -55,7 +66,7 @@ node dist/cli.js report --last 24h
 ## How it works
 
 1. Every **30 seconds** (configurable), the watchdog samples all running processes via `ps`.
-2. If any single process exceeds the **CPU threshold** (default 80%) or **memory threshold** (default 50%), an alert is written to a structured JSONL log file.
+2. If any single process exceeds the **CPU threshold** (default 80%), or the **system-wide memory** exceeds the **memory threshold** (default 90%), an alert is written to a structured JSONL log file with the top offenders.
 3. A snapshot with system-wide stats and the top 5 processes (by CPU and memory) is always logged, even if nothing breaches the threshold.
 4. Logs are stored as one file per day: `~/.macos-watchdog/logs/watchdog-YYYY-MM-DD.jsonl`
 5. The `report` command reads these logs and produces a Markdown report with tables, rankings, and a timeline.
@@ -72,7 +83,7 @@ node dist/cli.js start [options]
 |--------|---------|-------------|
 | `--interval <sec>` | `30` | How often to sample (seconds) |
 | `--cpu-threshold <pct>` | `80` | Per-process CPU % to trigger an alert |
-| `--mem-threshold <pct>` | `50` | Per-process memory % to trigger an alert |
+| `--mem-threshold <pct>` | `90` | System-wide memory % to trigger an alert |
 
 Press `Ctrl+C` to stop, or use the `stop` command from another terminal.
 

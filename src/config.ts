@@ -6,7 +6,7 @@ export interface Config {
   intervalSec: number;
   /** CPU usage % threshold per-process to trigger a log entry */
   cpuThreshold: number;
-  /** Memory usage % threshold per-process to trigger a log entry */
+  /** System-wide memory usage % threshold to trigger a log entry */
   memThreshold: number;
   /** Directory where JSONL log files are stored */
   logDir: string;
@@ -25,7 +25,7 @@ const BASE_DIR =
 export const DEFAULT_CONFIG: Config = {
   intervalSec: 30,
   cpuThreshold: 80,
-  memThreshold: 50,
+  memThreshold: 90,
   logDir: path.join(BASE_DIR, "logs"),
   reportDir: path.join(BASE_DIR, "reports"),
   pidFile: path.join(BASE_DIR, "watchdog.pid"),

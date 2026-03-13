@@ -25,9 +25,6 @@ async function tick(config: Config): Promise<void> {
   const heavyCpuProcs = snapshot.topCpu.filter(
     (p) => p.cpu >= config.cpuThreshold,
   );
-  const heavyMemProcs = snapshot.topMem.filter(
-    (p) => p.mem >= config.memThreshold,
-  );
 
   if (heavyCpuProcs.length > 0) {
     const entry: LogEntry = {
@@ -44,21 +41,21 @@ async function tick(config: Config): Promise<void> {
     console.log(`[${snapshot.timestamp}] CPU ALERT — ${heavyCpuProcs.length} process(es) above ${config.cpuThreshold}%`);
   }
 
-  if (heavyMemProcs.length > 0) {
+  if (snapshot.usedMemPct >= config.memThreshold) {
     const entry: LogEntry = {
       timestamp: snapshot.timestamp,
       level: "alert",
       type: "mem",
-      message: `High memory detected (system ~${snapshot.usedMemPct}% used). Top offenders:\n${formatProcs(heavyMemProcs, "mem")}`,
+      message: `High system memory (${snapshot.usedMemPct}% used, ${snapshot.freeMemMB}MB free). Top consumers:\n${formatProcs(snapshot.topMem, "mem")}`,
       data: {
         usedMemPct: snapshot.usedMemPct,
         freeMemMB: snapshot.freeMemMB,
         totalMemMB: snapshot.totalMemMB,
-        processes: heavyMemProcs,
+        processes: snapshot.topMem,
       },
     };
     writeLog(config.logDir, entry);
-    console.log(`[${snapshot.timestamp}] MEM ALERT — ${heavyMemProcs.length} process(es) above ${config.memThreshold}%`);
+    console.log(`[${snapshot.timestamp}] MEM ALERT — system at ${snapshot.usedMemPct}% (${snapshot.freeMemMB}MB free)`);
   }
 
   // Always write a periodic snapshot at info level for the report
@@ -88,7 +85,7 @@ export function startMonitor(config: Config): void {
   console.log(`Watchdog started (PID ${process.pid})`);
   console.log(`  Interval: ${config.intervalSec}s`);
   console.log(`  CPU threshold: ${config.cpuThreshold}%`);
-  console.log(`  Mem threshold: ${config.memThreshold}%`);
+  console.log(`  Mem threshold: ${config.memThreshold}% (system-wide)`);
   console.log(`  Logs: ${config.logDir}`);
   console.log(`  PID file: ${config.pidFile}`);
   console.log("");

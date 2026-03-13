@@ -21,7 +21,7 @@ function usage(): never {
   START OPTIONS
     --interval <sec>       Sampling interval (default: 30)
     --cpu-threshold <pct>  Per-process CPU alert threshold (default: 80)
-    --mem-threshold <pct>  Per-process memory alert threshold (default: 50)
+    --mem-threshold <pct>  System-wide memory % alert threshold (default: 90)
 
   REPORT OPTIONS
     --from <YYYY-MM-DD>    Start date (default: today)
