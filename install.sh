@@ -5,7 +5,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PLIST_NAME="com.watchdog.monitor"
 PLIST_SRC="$SCRIPT_DIR/$PLIST_NAME.plist"
 PLIST_DST="$HOME/Library/LaunchAgents/$PLIST_NAME.plist"
-NODE_BIN="$(which node)"
+NODE_BIN="$(realpath "$(which node)" 2>/dev/null || readlink -f "$(which node)" 2>/dev/null || which node)"
 CLI_JS="$SCRIPT_DIR/dist/cli.js"
 
 echo "=== macos-watchdog installer ==="

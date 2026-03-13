@@ -7,7 +7,6 @@
 
     <key>ProgramArguments</key>
     <array>
-        <!-- UPDATE this path if your node binary is elsewhere -->
         <string>/Users/yuriitkachenko/.local/share/fnm/node-versions/v20.19.2/installation/bin/node</string>
         <string>/Users/yuriitkachenko/projects/macos-watchdog/dist/cli.js</string>
         <string>start</string>
