@@ -1,4 +1,8 @@
 node_modules/
 dist/
 *.js.map
-.npmrc
+
+# OS files
+.DS_Store
+Thumbs.db
+._*
